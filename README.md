@@ -21,12 +21,13 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 - **Encryption:** Crypto-JS
 - **TOTP Logic:** OTPAuth
 
-## � Deploy Your Instance (Recommended)
+## 🚀 Deploy Your Instance (Recommended)
 
-**Fork this repository** and deploy to Vercel/Netlify for free. This gives you control over updates.
+**Fork this repository** and deploy to Vercel/Netlify/Cloudflare for free. This gives you control over updates.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/donnimsipa/otphaven/tree/latest)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/donnimsipa/otphaven&branch=latest)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/donnimsipa/otphaven)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/donnimsipa/otphaven)
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/donnimsipa/otphaven)
 
 ## 💻 Local Development
 
@@ -34,7 +35,7 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/donnimsipa/otphaven.git
+    git clone https://github.com/yourusername/otphaven.git
     cd otphaven
     ```
 
