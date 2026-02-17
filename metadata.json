@@ -1,0 +1,7 @@
+{
+  "name": "AuthGuard - Secure 2FA",
+  "description": "A secure, mobile-first TOTP authenticator with offline, S3, and Nostr sync capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
