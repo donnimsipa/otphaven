@@ -111,8 +111,16 @@ export interface VaultState {
 *   **Settings:**
     *   Dark Mode/Light Mode toggles.
     *   Security toggles (Auto-reveal, Auto-lock duration).
-    *   Backup & Restore (Encrypted/Raw).
+    *   Backup & Restore (Encrypted/Raw/QR Codes ZIP).
 *   **Help:** User guide modal.
+
+### Export QR Codes Feature
+The QR export feature allows users to export all accounts as individual QR code images in a ZIP file:
+*   **Usage:** Click "Backup" in Settings, then select "Export as QR Codes (ZIP)".
+*   **Processing:** Each account with a secret is converted to an `otpauth://` URI and generated as a QR code PNG image.
+*   **File Format:** All QR codes are packaged into a single ZIP file for easy download.
+*   **Filename:** Each QR code is named with the format `{number}_{issuer}_{label}.png`.
+*   **Use Case:** Useful for migrating to other authenticator apps or printing physical backup codes.
 
 ### Batch QR Import Feature
 The batch import feature allows users to import multiple QR code images simultaneously:

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, DecryptedVault, TOTPAccount } from '../types';
-import { Save, Cloud, Radio, WifiOff, Download, Upload, Moon, Sun, Monitor, FileText, Check, Eye, EyeOff, FastForward, Lock, FileJson, Clock, Database, AlertTriangle } from 'lucide-react';
+import { Save, Cloud, Radio, WifiOff, Download, Upload, Moon, Sun, Monitor, FileText, Check, Eye, EyeOff, FastForward, Lock, FileJson, Clock, Database, AlertTriangle, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { decryptBackup, encryptBackup, getStorageUsage } from '../services/cryptoService';
 
@@ -53,26 +53,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
     };
   };
 
-  const performExport = (isEncrypted: boolean) => {
-    let payload = '';
-    let filename = `otphaven-backup-${Date.now()}`;
-    
-    // Clean vault data before export
-    const cleanedVault = cleanVaultForExport(vault);
-    
-    if (isEncrypted) {
-        if (exportPassword.length < 4) {
-            setErrorMsg("Password must be at least 4 chars");
-            return;
-        }
-        payload = encryptBackup(cleanedVault, exportPassword);
-        filename += '.enc'; // Changed to .enc for v2
-    } else {
-        payload = JSON.stringify(cleanedVault, null, 2);
-        filename += '.json';
-    }
-
-    const blob = new Blob([payload], { type: 'text/plain' });
+  const downloadFile = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -88,9 +69,83 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }, 100);
+  };
+
+  const performExport = (isEncrypted: boolean) => {
+    let payload = '';
+    let filename = `otphaven-backup-${Date.now()}`;
+    
+    // Clean vault data before export
+    const cleanedVault = cleanVaultForExport(vault);
+    
+    if (isEncrypted) {
+        if (exportPassword.length < 4) {
+            setErrorMsg("Password must be at least 4 chars");
+            return;
+        }
+        payload = encryptBackup(cleanedVault, exportPassword);
+        filename += '.enc';
+    } else {
+        payload = JSON.stringify(cleanedVault, null, 2);
+        filename += '.json';
+    }
+
+    const blob = new Blob([payload], { type: 'application/json' });
+    downloadFile(blob, filename);
     
     setShowExportModal(false);
     setErrorMsg('');
+  };
+
+  const performExportQR = async () => {
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const JSZip = (await import('jszip')).default;
+      
+      const zip = new JSZip();
+      const cleanedVault = cleanVaultForExport(vault);
+      
+      for (let i = 0; i < cleanedVault.accounts.length; i++) {
+        const acc = cleanedVault.accounts[i];
+        if (!acc.secret) continue;
+        
+        // Build otpauth:// URI
+        const issuer = encodeURIComponent(acc.issuer || 'Unknown');
+        const label = encodeURIComponent(acc.label || 'Account');
+        const secret = acc.secret;
+        const otpauthUrl = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}`;
+        
+        // Generate QR code as data URL
+        const qrDataUrl = await QRCode.toDataURL(otpauthUrl, { 
+          width: 512,
+          margin: 2,
+          errorCorrectionLevel: 'M'
+        });
+        
+        // Convert data URL to blob
+        const base64Data = qrDataUrl.split(',')[1];
+        const binaryData = atob(base64Data);
+        const bytes = new Uint8Array(binaryData.length);
+        for (let j = 0; j < binaryData.length; j++) {
+          bytes[j] = binaryData.charCodeAt(j);
+        }
+        
+        // Add to zip with safe filename
+        const safeFilename = `${acc.issuer || 'Unknown'}_${acc.label || 'Account'}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+        zip.file(`${i + 1}_${safeFilename}.png`, bytes);
+      }
+      
+      // Generate zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const filename = `otphaven-qrcodes-${Date.now()}.zip`;
+      downloadFile(zipBlob, filename);
+      
+      setShowExportModal(false);
+      alert(`Exported ${cleanedVault.accounts.filter(a => a.secret).length} QR codes`);
+    } catch (e) {
+      console.error('QR Export failed:', e);
+      alert('Failed to export QR codes. Please try again.');
+    }
   };
 
   // --- Import Logic ---
@@ -99,8 +154,21 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
     if (!file) return;
 
     const reader = new FileReader();
+    
+    reader.onerror = () => {
+        alert("Failed to read file. Please try again.");
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    
     reader.onload = (ev) => {
         const content = ev.target?.result as string;
+        
+        if (!content || content.trim() === '') {
+            alert("File is empty or unreadable.");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        
         try {
             // Try parsing as JSON first (Raw/Legacy)
             const data = JSON.parse(content);
@@ -123,6 +191,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
         setImportPassword('');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
+    
     reader.readAsText(file);
   };
 
@@ -153,22 +222,14 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
                   label: "user@example.com",
                   secret: "JBSWY3DPEHPK3PXP",
                   password: "OptionalPassword123",
-                  category: "Personal",
-                  algorithm: "SHA1",
-                  digits: 6,
-                  period: 30
+                  category: "Personal"
               }
           ],
           settings: settings
       };
       
       const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'import_template.json';
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadFile(blob, 'import_template.json');
   };
 
   const themeOptionClass = (isActive: boolean) => 
@@ -393,7 +454,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
             <label className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition cursor-pointer">
                 <Upload size={24} className="mb-2 text-brand-500" />
                 <span className="text-sm font-medium">Restore</span>
-                <input ref={fileInputRef} type="file" accept=".json,.enc" className="hidden" onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept=".json,.enc,application/json,text/plain" className="hidden" onChange={handleFileChange} />
             </label>
         </div>
         
@@ -455,9 +516,16 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
 
                         <button 
                             onClick={() => performExport(false)}
-                            className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-red-100 hover:text-red-600 transition flex items-center justify-center gap-2"
+                            className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
                         >
-                            <FileText size={16} /> Export Raw JSON (Unsafe)
+                            <FileText size={16} /> Export Raw JSON
+                        </button>
+
+                        <button 
+                            onClick={performExportQR}
+                            className="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
+                        >
+                            <QrCode size={16} /> Export as QR Codes (ZIP)
                         </button>
                     </div>
                     <button onClick={() => setShowExportModal(false)} className="mt-4 text-center w-full text-sm text-gray-500">Cancel</button>
