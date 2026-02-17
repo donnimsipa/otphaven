@@ -2,7 +2,7 @@
   "name": "otphaven",
   "private": true,
   "description": "Secure, offline-first TOTP generator and vault.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -88,7 +88,11 @@ export interface VaultState {
 3.  **Backups:**
     *   **Raw Export:** Unsafe JSON export.
     *   **Encrypted Export:** AES Encrypted string requiring a separate password to decrypt/restore.
-4.  **Auto-Lock:** App clears sensitive state after user inactivity.
+4.  **Auto-Lock:** App clears sensitive state after user inactivity (disabled in No-PIN mode).
+5.  **No-PIN Mode (`VITE_DISABLE_PIN`):**
+    *   Skips the PIN screen and auto-unlocks using a static internal key.
+    *   Designed for deployments behind external auth providers (Auth0, etc.).
+    *   Disables auto-lock and manual logout.
 
 ## 6. Current Feature Set
 *   **Authentication:** PIN creation and login (Unlock).

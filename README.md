@@ -65,6 +65,15 @@ You can also run otphaven using Docker.
 3.  **Access the app:**
     Open your browser and go to `http://localhost:8080`.
 
+## ⚙️ Advanced Configuration
+
+otphaven supports environment variables for specialized deployments:
+
+- `VITE_DISABLE_PIN`: Set to `true` to disable the internal PIN lock screen. 
+    - **⚠️ WARNING:** When this is enabled, your vault is protected by a static internal key. You **MUST** manage authentication and access security yourself using external tools like Auth0, Authelia, Cloudflare Access, or a reverse proxy with OIDC. Failure to do so will leave your 2FA codes exposed to anyone who can access the URL.
+- `VITE_BASE_PATH`: Set this if you are deploying to a sub-folder (e.g., `/my-app/`).
+- `VITE_LOGIN_MESSAGE`: Set a custom message to be displayed on the PIN/Lock screen.
+
 ## 🌐 Manual Nginx Deployment
 
 If you want to deploy to a manual Nginx server:
@@ -74,9 +83,11 @@ If you want to deploy to a manual Nginx server:
 3.  **Configure Nginx** to serve the `index.html` for all routes (see `nginx.conf` in this repo for a reference).
 
 
-## �🔒 Security Disclaimer
+## 🛡️ Security Disclaimer
 
-Always remember your master PIN. If you forget it, there is no "password reset" because your data is encrypted locally with that PIN. Your data is stored in your browser's `localStorage`. Clearing your browser data will delete your vault unless you have a backup.
+**Master PIN:** Always remember your master PIN. If you forget it, there is no "password reset" because your data is encrypted locally with that PIN. Your data is stored in your browser's `localStorage`. Clearing your browser data will delete your vault unless you have a backup.
+
+**No-PIN Mode:** If you enable `VITE_DISABLE_PIN`, you are responsible for the security of the application layer. Ensure you have robust authentication (like Auth0, Okta, or Authelia) in front of the application.
 
 ## 📄 License
 

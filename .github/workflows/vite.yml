@@ -37,6 +37,7 @@ jobs:
         run: bun run build
         env:
           VITE_BASE_PATH: '/otphaven/'
+          VITE_LOGIN_MESSAGE: 'Welcome to otphaven Demo!\nEnter any PIN of your choice to create a temporary vault and explore the features.'
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

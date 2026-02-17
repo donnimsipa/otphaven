@@ -10,6 +10,10 @@ import P2PSync from './components/P2PSync';
 import { motion, AnimatePresence } from 'framer-motion';
 import { version } from './package.json';
 
+const PUBLIC_PIN = '0000000000'; // Hardcoded internal key for disabled PIN mode
+const DIS_PIN = import.meta.env.VITE_DISABLE_PIN === 'true';
+const LOGIN_MSG = import.meta.env.VITE_LOGIN_MESSAGE || '';
+
 const DEFAULT_SETTINGS: AppSettings = {
     theme: 'system',
     syncMethod: 'offline',
@@ -69,8 +73,37 @@ const App: React.FC = () => {
     // Initialization
     useEffect(() => {
         const hasVault = vaultExists();
-        setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
-        setIsSetup(!hasVault);
+
+        if (DIS_PIN) {
+            try {
+                if (!hasVault) {
+                    // Initial setup for No-PIN mode
+                    const initialVault: DecryptedVault = { accounts: [], settings: DEFAULT_SETTINGS };
+                    saveVault(initialVault, PUBLIC_PIN);
+                    setVaultState({ isLocked: false, hasVault: true, data: initialVault });
+                    setIsSetup(false);
+                } else {
+                    // Auto unlock
+                    const data = loadVault(PUBLIC_PIN);
+                    if (data) {
+                        setVaultState({ isLocked: false, hasVault: true, data });
+                        setIsSetup(false);
+                        setPin(PUBLIC_PIN);
+                    } else {
+                        // Vault exists but encrypted with real PIN?
+                        setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
+                        setIsSetup(false);
+                    }
+                }
+            } catch (e) {
+                console.error("Auto-unlock failed", e);
+                setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
+                setIsSetup(!hasVault);
+            }
+        } else {
+            setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
+            setIsSetup(!hasVault);
+        }
     }, []);
 
     // Recalculate storage when view changes or vault saves
@@ -122,7 +155,7 @@ const App: React.FC = () => {
 
         // Check for idle
         const intervalId = setInterval(() => {
-            if (vaultState.isLocked || !vaultState.data) return;
+            if (vaultState.isLocked || !vaultState.data || DIS_PIN) return;
 
             const autoLockDuration = vaultState.data.settings.autoLockDuration ?? 60; // Default 60s
             if (autoLockDuration === 0) return; // Disabled
@@ -344,6 +377,13 @@ const App: React.FC = () => {
                     </div>
                     <h1 className="text-2xl font-bold text-center mb-1 text-gray-900 dark:text-white">otphaven</h1>
                     <p className="text-center text-[10px] font-mono text-gray-400 dark:text-gray-500 mb-6 uppercase tracking-widest">Version {version}</p>
+
+                    {LOGIN_MSG && (
+                        <div className="mb-6 p-3 bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 rounded-xl text-center">
+                            <p className="text-xs text-brand-700 dark:text-brand-300 font-medium whitespace-pre-wrap">{LOGIN_MSG}</p>
+                        </div>
+                    )}
+
                     <p className="text-center text-gray-500 mb-8">
                         {isSetup ? "Create a PIN to secure your vault" : "Enter your PIN to unlock"}
                     </p>
@@ -379,7 +419,7 @@ const App: React.FC = () => {
                         </button>
                     )}
                 </div>
-            </div>
+            </div >
         );
     }
 
@@ -451,9 +491,11 @@ const App: React.FC = () => {
                                     <SettingsIcon size={20} />
                                 </button>
                             )}
-                            <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-500 dark:text-red-400" title="Lock Vault">
-                                <LogOut size={20} />
-                            </button>
+                            {!DIS_PIN && (
+                                <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-500 dark:text-red-400" title="Lock Vault">
+                                    <LogOut size={20} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
