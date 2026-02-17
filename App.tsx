@@ -285,9 +285,12 @@ const App: React.FC = () => {
     };
 
     const handleBatchImageImport = async (files: FileList) => {
+        if (!vaultState.data) return;
+
         const { Html5Qrcode } = await import('html5-qrcode');
         let successCount = 0;
         let failCount = 0;
+        const newAccounts: TOTPAccount[] = [];
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -296,11 +299,9 @@ const App: React.FC = () => {
                 const result = await html5QrCode.scanFile(file, false);
                 const account = parseMigrationUrl(result);
                 
-                if (account && vaultState.data) {
-                    const newAccounts = [...vaultState.data.accounts];
+                if (account) {
                     account.updatedAt = Date.now();
                     newAccounts.push(account);
-                    handleUpdateVault({ ...vaultState.data, accounts: newAccounts });
                     successCount++;
                 } else {
                     failCount++;
@@ -309,6 +310,12 @@ const App: React.FC = () => {
                 console.error(`Failed to scan ${file.name}:`, e);
                 failCount++;
             }
+        }
+
+        // Save all accounts at once
+        if (newAccounts.length > 0) {
+            const updatedAccounts = [...vaultState.data.accounts, ...newAccounts];
+            handleUpdateVault({ ...vaultState.data, accounts: updatedAccounts });
         }
 
         alert(`Batch Import Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}`);
