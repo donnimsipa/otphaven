@@ -17,6 +17,15 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    strategy:
+      matrix:
+        variant:
+          - name: "default"
+            suffix: ""
+            build_args: ""
+          - name: "nopin"
+            suffix: "-nopin"
+            build_args: "VITE_DISABLE_PIN=true"
 
     steps:
       - name: Checkout repository
@@ -44,12 +53,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=semver,pattern={{version}}${{ matrix.variant.suffix }}
+            type=semver,pattern={{major}}.{{minor}}${{ matrix.variant.suffix }}
+            type=ref,event=branch,suffix=${{ matrix.variant.suffix }}
+            type=raw,value=latest${{ matrix.variant.suffix }},enable=${{ github.ref == 'refs/heads/master' }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (${{ matrix.variant.name }})
         id: build-and-push
         uses: docker/build-push-action@v5
         with:
@@ -57,9 +66,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.variant.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant.name }}
           platforms: linux/amd64,linux/arm64
+          build-args: ${{ matrix.variant.build_args }}
 
       - name: Sign the published Docker image
         if: github.event_name != 'pull_request'

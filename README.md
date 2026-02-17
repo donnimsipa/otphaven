@@ -21,13 +21,20 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 - **Encryption:** Crypto-JS
 - **TOTP Logic:** OTPAuth
 
+## � Deploy Your Instance (Recommended)
+
+**Fork this repository** and deploy to Vercel/Netlify for free. This gives you control over updates.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/donnimsipa/otphaven/tree/latest)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/donnimsipa/otphaven&branch=latest)
+
 ## 💻 Local Development
 
-**Prerequisites:** [Node.js](https://nodejs.org/) and [Bun](https://bun.sh/) (optional, but recommended).
+**Prerequisites:** [Bun](https://bun.sh/) (recommended, faster) or [Node.js](https://nodejs.org/)
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/otphaven.git
+    git clone https://github.com/donnimsipa/otphaven.git
     cd otphaven
     ```
 
@@ -48,13 +55,31 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 4.  **Open your browser:**
     Navigate to `http://localhost:3000` to view the app.
 
-## � Docker Deployment
+## 🐳 Docker Deployment
 
-You can also run otphaven using Docker.
+You can run otphaven using Docker with two variants:
+
+### Standard Version (with PIN protection)
+```bash
+docker pull ghcr.io/donnimsipa/otphaven:latest
+docker run -d -p 8080:80 --name otphaven ghcr.io/donnimsipa/otphaven:latest
+```
+
+### No-PIN Version (auto-unlock, requires external auth)
+```bash
+docker pull ghcr.io/donnimsipa/otphaven:latest-nopin
+docker run -d -p 8080:80 --name otphaven ghcr.io/donnimsipa/otphaven:latest-nopin
+```
+
+**Or build locally:**
 
 1.  **Build the image:**
     ```bash
+    # Standard version
     docker build -t otphaven .
+    
+    # No-PIN version
+    docker build --build-arg VITE_DISABLE_PIN=true -t otphaven:nopin .
     ```
 
 2.  **Run the container:**

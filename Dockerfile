@@ -12,6 +12,16 @@ RUN bun install --frozen-lockfile
 # Copy the rest of the application code
 COPY . .
 
+# Build arguments for environment variables
+ARG VITE_DISABLE_PIN=false
+ARG VITE_LOGIN_MESSAGE=""
+ARG VITE_BASE_PATH=""
+
+# Set environment variables for build
+ENV VITE_DISABLE_PIN=${VITE_DISABLE_PIN}
+ENV VITE_LOGIN_MESSAGE=${VITE_LOGIN_MESSAGE}
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
+
 # Build the application
 RUN bun run build
 
