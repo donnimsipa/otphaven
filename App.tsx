@@ -278,9 +278,41 @@ const App: React.FC = () => {
         const account = parseMigrationUrl(data);
         if (account) {
             handleSaveAccount(account);
+            setView('home'); // Auto-close to home after successful scan
         } else {
             alert("Invalid QR Code");
         }
+    };
+
+    const handleBatchImageImport = async (files: FileList) => {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            try {
+                const html5QrCode = new Html5Qrcode("batch-reader");
+                const result = await html5QrCode.scanFile(file, false);
+                const account = parseMigrationUrl(result);
+                
+                if (account && vaultState.data) {
+                    const newAccounts = [...vaultState.data.accounts];
+                    account.updatedAt = Date.now();
+                    newAccounts.push(account);
+                    handleUpdateVault({ ...vaultState.data, accounts: newAccounts });
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (e) {
+                console.error(`Failed to scan ${file.name}:`, e);
+                failCount++;
+            }
+        }
+
+        alert(`Batch Import Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}`);
+        setView('home');
     };
 
     const handleImport = (importedVault: DecryptedVault) => {
@@ -620,13 +652,31 @@ const App: React.FC = () => {
                                 ) : (
                                     !formState.id && (
                                         <>
-                                            <button
-                                                onClick={() => setView('scanner')}
-                                                className="w-full py-6 mb-8 bg-gray-900 dark:bg-gray-800 text-white rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-gray-800 dark:hover:bg-gray-700 shadow-xl transition transform active:scale-[0.98]"
-                                            >
-                                                <span className="text-3xl">📷</span>
-                                                <span className="font-semibold">Scan QR Code</span>
-                                            </button>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                                                <button
+                                                    onClick={() => setView('scanner')}
+                                                    className="w-full py-6 bg-gray-900 dark:bg-gray-800 text-white rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-gray-800 dark:hover:bg-gray-700 shadow-xl transition transform active:scale-[0.98]"
+                                                >
+                                                    <span className="text-3xl">📷</span>
+                                                    <span className="font-semibold">Scan QR Code</span>
+                                                </button>
+
+                                                <label className="w-full py-6 bg-brand-600 dark:bg-brand-700 text-white rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-brand-700 dark:hover:bg-brand-800 shadow-xl transition transform active:scale-[0.98] cursor-pointer">
+                                                    <span className="text-3xl">🖼️</span>
+                                                    <span className="font-semibold">Import QR Images</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            if (e.target.files && e.target.files.length > 0) {
+                                                                handleBatchImageImport(e.target.files);
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
 
                                             <div className="relative mb-8">
                                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
@@ -748,9 +798,12 @@ const App: React.FC = () => {
                 {view === 'scanner' && (
                     <Scanner
                         onScan={handleScan}
-                        onClose={() => setView('add')}
+                        onClose={() => setView('home')}
                     />
                 )}
+
+                {/* Hidden element for batch scanning */}
+                <div id="batch-reader" style={{ display: 'none' }}></div>
 
                 {/* Help Modal */}
                 <AnimatePresence>
@@ -784,7 +837,8 @@ const App: React.FC = () => {
                                         </h3>
                                         <ul className="list-disc pl-10 space-y-1.5 marker:text-gray-300 dark:marker:text-gray-600">
                                             <li>Tap the floating <strong className="text-brand-600 dark:text-brand-400">+</strong> button.</li>
-                                            <li><strong>Scan QR:</strong> Use the camera to scan a 2FA QR code from your service provider.</li>
+                                            <li><strong>Scan QR:</strong> Use the camera to scan a 2FA QR code from your service provider. Window closes automatically after successful scan.</li>
+                                            <li><strong>Import QR Images:</strong> Select multiple QR code images from your device to import them all at once.</li>
                                             <li><strong>Manual Entry:</strong> Type in the Secret Key provided by the service if you can't scan a code.</li>
                                         </ul>
                                     </section>

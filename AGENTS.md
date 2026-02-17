@@ -102,7 +102,7 @@ export interface VaultState {
     *   Search/Filter.
 *   **TOTP:** Real-time 30s countdown, linear progress bar, "Show Next Code".
 *   **CRUD:**
-    *   **Create:** Scan QR Code or Manual Entry.
+    *   **Create:** Scan QR Code (camera), Batch Import QR Images (multiple files), or Manual Entry.
     *   **Read:** View codes (masked/unmasked), Copy actions.
     *   **Update:** Edit Account details.
     *   **Delete:** Remove account.
@@ -113,6 +113,16 @@ export interface VaultState {
     *   Security toggles (Auto-reveal, Auto-lock duration).
     *   Backup & Restore (Encrypted/Raw).
 *   **Help:** User guide modal.
+
+### Batch QR Import Feature
+The batch import feature allows users to import multiple QR code images simultaneously:
+*   **Usage:** Click "Import QR Images" button on the Add Account screen.
+*   **File Selection:** Select multiple image files containing QR codes.
+*   **Processing:** Each image is scanned using `html5-qrcode` library.
+*   **Auto-save:** Valid accounts are automatically added to the vault.
+*   **Summary:** Displays success/failure count after processing.
+*   **Auto-close:** Returns to home screen after completion.
+*   **Error Handling:** Individual file failures don't stop the batch process.
 
 ## 7. Development Guidelines for AI
 When asked to modify the code:

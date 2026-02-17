@@ -7,7 +7,8 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 - **Local-first Security:** Data is encrypted using AES-256 (PBKDF2) with your master PIN.
 - **Offline Generation:** TOTP codes are generated purely on the client side.
 - **P2P Sync:** Sync your vault across devices wirelessly using PeerJS (WebRTC).
-- **QR Scanning:** Easily add accounts by scanning QR codes.
+- **QR Scanning:** Easily add accounts by scanning QR codes with your camera.
+- **Batch QR Import:** Import multiple QR code images at once for quick setup.
 - **Responsive Design:** Optimized for mobile but fully functional on desktop.
 - **Privacy Oriented:** No backend required for core functionality.
 

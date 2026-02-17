@@ -22,9 +22,9 @@ const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
             );
             
             scanner.render((decodedText) => {
-                onScan(decodedText);
                 scanner.clear();
-                onClose();
+                onScan(decodedText);
+                // onClose will be called by parent after successful save
             }, (errorMessage) => {
                // Ignore scan errors, they happen every frame
             });
