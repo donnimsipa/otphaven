@@ -9,9 +9,10 @@ interface SettingsProps {
   onSave: (newSettings: AppSettings) => void;
   onImport: (vaultData: DecryptedVault) => void;
   vault: DecryptedVault;
+  disablePin?: boolean;
 }
 
-const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault }) => {
+const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, disablePin = false }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [exportPassword, setExportPassword] = useState('');
   const [importPassword, setImportPassword] = useState('');
@@ -60,8 +61,17 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault }
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    a.style.display = 'none';
+    
+    // Append to body for iOS Firefox compatibility
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    
+    // Cleanup after a short delay
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
     
     setShowExportModal(false);
     setErrorMsg('');
@@ -244,29 +254,31 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault }
             </button>
         </div>
 
-        {/* Auto Lock Duration */}
-        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
-                    <Clock size={18} />
+        {/* Auto Lock Duration - Hidden in No-PIN mode */}
+        {!disablePin && (
+            <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+                        <Clock size={18} />
+                    </div>
+                    <div>
+                        <div className="font-medium">Auto Lock</div>
+                        <div className="text-xs text-gray-500">Time before locking vault.</div>
+                    </div>
                 </div>
-                <div>
-                    <div className="font-medium">Auto Lock</div>
-                    <div className="text-xs text-gray-500">Time before locking vault.</div>
-                </div>
+                <select 
+                    value={localSettings.autoLockDuration ?? 60}
+                    onChange={(e) => setLocalSettings(s => ({ ...s, autoLockDuration: parseInt(e.target.value) }))}
+                    className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-sm outline-none focus:border-brand-500"
+                >
+                    <option value={0}>Never</option>
+                    <option value={30}>30 Seconds</option>
+                    <option value={60}>1 Minute</option>
+                    <option value={300}>5 Minutes</option>
+                    <option value={600}>10 Minutes</option>
+                </select>
             </div>
-            <select 
-                value={localSettings.autoLockDuration ?? 60}
-                onChange={(e) => setLocalSettings(s => ({ ...s, autoLockDuration: parseInt(e.target.value) }))}
-                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-sm outline-none focus:border-brand-500"
-            >
-                <option value={0}>Never</option>
-                <option value={30}>30 Seconds</option>
-                <option value={60}>1 Minute</option>
-                <option value={300}>5 Minutes</option>
-                <option value={600}>10 Minutes</option>
-            </select>
-        </div>
+        )}
       </div>
 
       {/* Sync Method */}

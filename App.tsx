@@ -75,31 +75,32 @@ const App: React.FC = () => {
         const hasVault = vaultExists();
 
         if (DIS_PIN) {
+            // No-PIN mode: Auto-unlock immediately without showing PIN screen
+            setPin(PUBLIC_PIN);
             try {
                 if (!hasVault) {
                     // Initial setup for No-PIN mode
                     const initialVault: DecryptedVault = { accounts: [], settings: DEFAULT_SETTINGS };
                     saveVault(initialVault, PUBLIC_PIN);
                     setVaultState({ isLocked: false, hasVault: true, data: initialVault });
-                    setIsSetup(false);
                 } else {
                     // Auto unlock
                     const data = loadVault(PUBLIC_PIN);
                     if (data) {
                         setVaultState({ isLocked: false, hasVault: true, data });
-                        setIsSetup(false);
-                        setPin(PUBLIC_PIN);
                     } else {
-                        // Vault exists but encrypted with real PIN?
+                        // Vault exists but encrypted with real PIN - fallback to locked state
                         setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
-                        setIsSetup(false);
                     }
                 }
             } catch (e) {
                 console.error("Auto-unlock failed", e);
-                setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
-                setIsSetup(!hasVault);
+                // Even on error, try to show unlocked state with empty vault
+                const initialVault: DecryptedVault = { accounts: [], settings: DEFAULT_SETTINGS };
+                saveVault(initialVault, PUBLIC_PIN);
+                setVaultState({ isLocked: false, hasVault: true, data: initialVault });
             }
+            setIsSetup(false);
         } else {
             setVaultState(prev => ({ ...prev, hasVault, isLocked: true }));
             setIsSetup(!hasVault);
@@ -592,6 +593,7 @@ const App: React.FC = () => {
                                         }
                                     }}
                                     onImport={handleImport}
+                                    disablePin={DIS_PIN}
                                 />
                             </motion.div>
                         )}
@@ -735,7 +737,7 @@ const App: React.FC = () => {
                                 resetForm();
                                 setView('add');
                             }}
-                            className="absolute bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-full shadow-xl shadow-brand-600/30 flex items-center justify-center z-20 transition-transform active:scale-95 group"
+                            className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-full shadow-xl shadow-brand-600/30 flex items-center justify-center z-50 transition-transform active:scale-95 group"
                         >
                             <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
                         </motion.button>
@@ -803,14 +805,26 @@ const App: React.FC = () => {
                                             <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded text-green-600 dark:text-green-400"><ShieldCheck size={16} /></div>
                                             Security
                                         </h3>
-                                        <p className="pl-9">
-                                            Your data is encrypted with AES-256 (PBKDF2 Derived Key) using your PIN.
-                                            <span className="text-red-500 font-medium ml-1">Do not forget your PIN</span>.
-                                        </p>
-                                        <div className="ml-9 mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-100 dark:border-yellow-900/30 flex gap-2 items-start">
-                                            <Clock size={16} className="mt-0.5 shrink-0" />
-                                            <span><strong>Auto-Lock:</strong> Application will automatically lock after {currentAutoLockDuration === 0 ? 'never' : `${currentAutoLockDuration} seconds`} of inactivity.</span>
-                                        </div>
+                                        {DIS_PIN ? (
+                                            <div className="ml-9 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                                <p className="font-medium mb-1">Externally Secured Instance</p>
+                                                <p className="text-xs">
+                                                    This application is secured by your deployment's authentication layer. 
+                                                    Access control is managed externally (e.g., Auth0, Cloudflare Access, or reverse proxy).
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="pl-9">
+                                                    Your data is encrypted with AES-256 (PBKDF2 Derived Key) using your PIN.
+                                                    <span className="text-red-500 font-medium ml-1">Do not forget your PIN</span>.
+                                                </p>
+                                                <div className="ml-9 mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-100 dark:border-yellow-900/30 flex gap-2 items-start">
+                                                    <Clock size={16} className="mt-0.5 shrink-0" />
+                                                    <span><strong>Auto-Lock:</strong> Application will automatically lock after {currentAutoLockDuration === 0 ? 'never' : `${currentAutoLockDuration} seconds`} of inactivity.</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </section>
 
                                     <section className="space-y-3">
