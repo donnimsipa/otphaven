@@ -380,7 +380,14 @@ const App: React.FC = () => {
 
                     {LOGIN_MSG && (
                         <div className="mb-6 p-3 bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 rounded-xl text-center">
-                            <p className="text-xs text-brand-700 dark:text-brand-300 font-medium whitespace-pre-wrap">{LOGIN_MSG}</p>
+                            <p className="text-xs text-brand-700 dark:text-brand-300 font-medium whitespace-pre-wrap">
+                                {LOGIN_MSG.split('\\n').map((line, i) => (
+                                    <React.Fragment key={i}>
+                                        {line}
+                                        {i !== LOGIN_MSG.split('\\n').length - 1 && <br />}
+                                    </React.Fragment>
+                                ))}
+                            </p>
                         </div>
                     )}
 
