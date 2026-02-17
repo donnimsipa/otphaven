@@ -40,19 +40,35 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
       setExportPassword('');
   };
 
+  const cleanVaultForExport = (vault: DecryptedVault): DecryptedVault => {
+    // Remove unnecessary fields from accounts
+    const cleanedAccounts = vault.accounts.map(acc => {
+      const { updatedAt, digits, period, algorithm, icon, ...essential } = acc;
+      return essential;
+    });
+
+    return {
+      accounts: cleanedAccounts,
+      settings: vault.settings
+    };
+  };
+
   const performExport = (isEncrypted: boolean) => {
     let payload = '';
     let filename = `otphaven-backup-${Date.now()}`;
+    
+    // Clean vault data before export
+    const cleanedVault = cleanVaultForExport(vault);
     
     if (isEncrypted) {
         if (exportPassword.length < 4) {
             setErrorMsg("Password must be at least 4 chars");
             return;
         }
-        payload = encryptBackup(vault, exportPassword);
+        payload = encryptBackup(cleanedVault, exportPassword);
         filename += '.enc'; // Changed to .enc for v2
     } else {
-        payload = JSON.stringify(vault, null, 2);
+        payload = JSON.stringify(cleanedVault, null, 2);
         filename += '.json';
     }
 
