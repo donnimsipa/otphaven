@@ -116,6 +116,14 @@ If you want to deploy to a manual Nginx server:
 
 **No-PIN Mode:** If you enable `VITE_DISABLE_PIN`, you are responsible for the security of the application layer. Ensure you have robust authentication (like Auth0, Okta, or Authelia) in front of the application.
 
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and releases.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

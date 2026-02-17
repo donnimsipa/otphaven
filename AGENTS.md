@@ -31,6 +31,8 @@ The project root is treated as the source. Do not create a `src/` folder.
 *   `index.tsx`: React Root render.
 *   `App.tsx`: Main Controller, Router (State-based), and Global State.
 *   `types.ts`: TypeScript interfaces/Global types.
+*   `CHANGELOG.md`: Version history and release notes (Keep a Changelog format).
+*   `CONTRIBUTING.md`: Contribution guidelines for developers.
 *   `services/`:
     *   `cryptoService.ts`: AES encryption/decryption logic (Local Vault & Backups).
     *   `totpService.ts`: Logic for generating tokens and parsing `otpauth://` URIs.
@@ -139,6 +141,7 @@ When asked to modify the code:
 3.  **Style:** Use Tailwind CSS utility classes. Mobile-first design is a priority, but ensure desktop responsiveness.
 4.  **State:** Keep complex state in `App.tsx` and pass down handlers/data to components.
 5.  **Security:** Never log secrets or passwords to the console.
+6.  **Changelog:** When making significant changes, update `CHANGELOG.md` following the [Keep a Changelog](https://keepachangelog.com/) format. Use categories: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## 8. Future Roadmap (Context for Requests)
 *   **S3 Sync:** Implementing actual S3 upload/download logic in `cryptoService` (UI exists, logic pending).
