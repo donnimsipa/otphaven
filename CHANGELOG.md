@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-02-22
+
+### Added
+- Auto-release GitHub Actions workflow for automatic tagging and releases
+- PostCSS configuration for production-ready Tailwind CSS
+- Tailwind config file with custom theme
+- Dedicated styles.css for Tailwind directives
+
+### Changed
+- Migrated from Tailwind CDN to PostCSS plugin for production builds
+- Updated service worker to cache compiled CSS instead of CDN
+- Improved build performance with proper Tailwind purging
+
+### Fixed
+- Removed Tailwind CDN warning in production builds
+- Better CSS optimization and smaller bundle size
+
 ## [1.1.8] - 2026-02-22
 
 ### Changed
@@ -19,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - PWA now fully functional offline after initial online visit
-- Service worker cache version updated to match app version (1.1.8)
+- Service worker cache version updated to match app version
 - Manifest icons no longer require network requests
 
 ## [1.1.7] - 2026-02-17
@@ -154,7 +171,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Data stored in browser localStorage
 - Secrets never leave device unless explicitly synced
 
-[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.8...HEAD
+[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/donnimsipa/otphaven/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/donnimsipa/otphaven/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/donnimsipa/otphaven/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/donnimsipa/otphaven/compare/v1.1.5...v1.1.6

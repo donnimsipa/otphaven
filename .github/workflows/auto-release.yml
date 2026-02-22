@@ -1,0 +1,84 @@
+name: Auto Tag and Release
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'package.json'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      tag-exists: ${{ steps.check-tag.outputs.exists }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: get-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: v$VERSION"
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          if git rev-parse "v$(node -p "require('./package.json').version")" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag does not exist"
+          fi
+
+  create-release:
+    needs: check-version
+    if: needs.check-version.outputs.tag-exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog for current version
+        id: changelog
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          
+          # Extract changelog section for this version
+          awk "/^## \[$VERSION/ { flag=1; next } /^## \[/ { flag=0 } flag" CHANGELOG.md > release-notes.md
+          
+          # If no specific changelog found, use a default message
+          if [ ! -s release-notes.md ]; then
+            echo "Release $VERSION" > release-notes.md
+            echo "" >> release-notes.md
+            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> release-notes.md
+          fi
+          
+          cat release-notes.md
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ needs.check-version.outputs.version }}" -m "Release ${{ needs.check-version.outputs.version }}"
+          git push origin "${{ needs.check-version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.check-version.outputs.version }}
+          name: Release ${{ needs.check-version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

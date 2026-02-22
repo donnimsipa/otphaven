@@ -120,6 +120,43 @@ Example:
 - QR scanner compatibility on iOS Safari
 ```
 
+### Releasing a New Version
+
+Releases are automated via GitHub Actions:
+
+1. Update version in `package.json`:
+   ```bash
+   # Manually edit package.json or use npm version
+   npm version patch  # 1.1.7 -> 1.1.8
+   npm version minor  # 1.1.7 -> 1.2.0
+   npm version major  # 1.1.7 -> 2.0.0
+   ```
+
+2. Update `CHANGELOG.md`:
+   - Move `[Unreleased]` items to new version section
+   - Add release date
+   - Update version links at bottom
+
+3. Update service worker cache version in `sw.js`:
+   ```javascript
+   const CACHE_NAME = 'otphaven-v1.1.8';
+   ```
+
+4. Commit and push to `master`:
+   ```bash
+   git add package.json CHANGELOG.md sw.js
+   git commit -m "chore: release v1.1.8"
+   git push origin master
+   ```
+
+5. GitHub Actions will automatically:
+   - Create git tag (e.g., `v1.1.8`)
+   - Create GitHub Release with changelog notes
+   - Trigger Docker image builds
+   - Deploy to GitHub Pages
+
+No need to manually run `git tag` or `git push --tags`!
+
 ## 🔒 Security Issues
 
 If you discover a security vulnerability:

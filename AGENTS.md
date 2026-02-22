@@ -12,9 +12,7 @@ This project is built as a React SPA using **Vite**.
 *   **Framework:** React 18+ (via `esm.sh` or local installation).
 *   **Module System:** ES Modules, with Vite as the development server and bundler.
 *   **Entry Point:** `index.html` loads `index.tsx` as a module.
-
-*   **Framework:** React 18+ (via `esm.sh`).
-*   **Styling:** Tailwind CSS (via CDN script, configured in `index.html`).
+*   **Styling:** Tailwind CSS (via PostCSS plugin, configured in `tailwind.config.js`).
 *   **Icons:** Lucide React.
 *   **Animations:** Framer Motion.
 *   **Logic Libraries:** 
@@ -27,8 +25,11 @@ This project is built as a React SPA using **Vite**.
 ## 3. Project Structure
 The project root is treated as the source. Do not create a `src/` folder.
 
-*   `index.html`: Entry point, Import Maps, Tailwind Config.
-*   `index.tsx`: React Root render.
+*   `index.html`: Entry point, Import Maps.
+*   `index.tsx`: React Root render, imports styles.css.
+*   `styles.css`: Tailwind CSS directives and custom styles.
+*   `tailwind.config.js`: Tailwind CSS configuration.
+*   `postcss.config.js`: PostCSS configuration for Tailwind processing.
 *   `App.tsx`: Main Controller, Router (State-based), and Global State.
 *   `types.ts`: TypeScript interfaces/Global types.
 *   `CHANGELOG.md`: Version history and release notes (Keep a Changelog format).
@@ -142,6 +143,11 @@ When asked to modify the code:
 4.  **State:** Keep complex state in `App.tsx` and pass down handlers/data to components.
 5.  **Security:** Never log secrets or passwords to the console.
 6.  **Changelog:** When making significant changes, update `CHANGELOG.md` following the [Keep a Changelog](https://keepachangelog.com/) format. Use categories: Added, Changed, Deprecated, Removed, Fixed, Security.
+7.  **Versioning:** When bumping version in `package.json`, also update:
+    *   `CHANGELOG.md` - Move Unreleased items to new version section with date
+    *   `sw.js` - Update `CACHE_NAME` to match new version (e.g., `otphaven-v1.1.8`)
+    *   Commit message should follow: `chore: release v1.1.8` or `feat: release v1.1.8 with [feature]`
+    *   GitHub Actions will auto-create git tag and release when pushed to master
 
 ## 8. Future Roadmap (Context for Requests)
 *   **S3 Sync:** Implementing actual S3 upload/download logic in `cryptoService` (UI exists, logic pending).

@@ -120,6 +120,8 @@ If you want to deploy to a manual Nginx server:
 
 See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and releases.
 
+Releases are automatically created when the version in `package.json` is updated and pushed to the `master` branch.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.

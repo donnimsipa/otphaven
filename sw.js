@@ -1,9 +1,9 @@
-const CACHE_NAME = 'otphaven-v1.1.8';
+const CACHE_NAME = 'otphaven-v1.1.9';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  'https://cdn.tailwindcss.com',
+  './styles.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   // Core dependencies from esm.sh
   'https://esm.sh/react@^19.2.4',
@@ -41,10 +41,9 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
 
-        // Cache responses from esm.sh, CDNs, and local assets
+        // Cache responses from esm.sh, fonts, and local assets
         const shouldCache = 
           event.request.url.includes('esm.sh') ||
-          event.request.url.includes('cdn.tailwindcss.com') ||
           event.request.url.includes('fonts.googleapis.com') ||
           event.request.url.includes('fonts.gstatic.com') ||
           event.request.url.startsWith(self.location.origin);
