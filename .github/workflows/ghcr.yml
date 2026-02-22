@@ -4,7 +4,20 @@ on:
   push:
     branches: [ "master" ]
     tags: [ 'v*.*.*' ]
+    paths:
+      - 'package.json'
+      - 'Dockerfile'
+      - '**.tsx'
+      - '**.ts'
+      - '**.html'
+      - '**.css'
+      - '**.js'
+      - '.github/workflows/ghcr.yml'
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Auto Tag and Release"]
+    types:
+      - completed
 
 env:
   REGISTRY: ghcr.io
@@ -13,6 +26,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Skip if workflow_run failed
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       packages: write
@@ -30,6 +45,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Check if running from tag
+        id: check-tag
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "Running from tag: $GITHUB_REF"
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "Not running from tag"
+          fi
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -53,10 +88,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}${{ matrix.variant.suffix }}
-            type=semver,pattern={{major}}.{{minor}}${{ matrix.variant.suffix }}
-            type=ref,event=branch,suffix=${{ matrix.variant.suffix }}
-            type=raw,value=latest${{ matrix.variant.suffix }},enable=${{ github.ref == 'refs/heads/master' }}
+            type=semver,pattern={{version}}${{ matrix.variant.suffix }},enable=${{ steps.check-tag.outputs.is_tag == 'true' }}
+            type=semver,pattern={{major}}.{{minor}}${{ matrix.variant.suffix }},enable=${{ steps.check-tag.outputs.is_tag == 'true' }}
+            type=raw,value=${{ steps.package-version.outputs.version }}${{ matrix.variant.suffix }},enable=${{ steps.check-tag.outputs.is_tag == 'false' }}
+            type=raw,value=latest${{ matrix.variant.suffix }},enable=true
 
       - name: Build and push Docker image (${{ matrix.variant.name }})
         id: build-and-push
@@ -76,4 +111,4 @@ jobs:
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}}

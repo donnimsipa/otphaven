@@ -511,17 +511,6 @@ const App: React.FC = () => {
                         )}
 
                         <div className="flex gap-1">
-                            {/* Only show Sync button if unlocked and not in setup */}
-                            {view === 'home' && (
-                                <button
-                                    onClick={() => setView('p2p')}
-                                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-400 hover:text-brand-600"
-                                    title="P2P Sync"
-                                >
-                                    <Wifi size={20} />
-                                </button>
-                            )}
-
                             <button
                                 onClick={() => setShowHelp(true)}
                                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-400 hover:text-brand-600"
@@ -633,6 +622,7 @@ const App: React.FC = () => {
                                     }}
                                     onImport={handleImport}
                                     disablePin={DIS_PIN}
+                                    onOpenP2PSync={() => setView('p2p')}
                                 />
                             </motion.div>
                         )}

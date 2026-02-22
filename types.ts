@@ -16,7 +16,7 @@ export type ThemeOption = 'system' | 'light' | 'dark';
 
 export interface AppSettings {
   theme: ThemeOption;
-  syncMethod: 'offline' | 'nostr' | 's3';
+  syncMethod: 'offline' | 'p2p' | 'nostr' | 's3';
   autoReveal: boolean;
   showNextCode: boolean;
   autoLockDuration: number; // in seconds, 0 to disable

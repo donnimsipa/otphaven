@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, DecryptedVault, TOTPAccount } from '../types';
-import { Save, Cloud, Radio, WifiOff, Download, Upload, Moon, Sun, Monitor, FileText, Check, Eye, EyeOff, FastForward, Lock, FileJson, Clock, Database, AlertTriangle, QrCode } from 'lucide-react';
+import { Save, Cloud, Radio, WifiOff, Download, Upload, Moon, Sun, Monitor, FileText, Check, Eye, EyeOff, FastForward, Lock, FileJson, Clock, Database, AlertTriangle, QrCode, Wifi } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { decryptBackup, encryptBackup, getStorageUsage } from '../services/cryptoService';
 
@@ -10,9 +10,10 @@ interface SettingsProps {
   onImport: (vaultData: DecryptedVault) => void;
   vault: DecryptedVault;
   disablePin?: boolean;
+  onOpenP2PSync?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, disablePin = false }) => {
+const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, disablePin = false, onOpenP2PSync }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [exportPassword, setExportPassword] = useState('');
   const [importPassword, setImportPassword] = useState('');
@@ -378,32 +379,61 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onImport, vault, 
             </div>
           </label>
 
-          <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${localSettings.syncMethod === 'nostr' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}>
+          <label 
+            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${localSettings.syncMethod === 'p2p' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}
+            onClick={() => {
+              setLocalSettings(s => ({ ...s, syncMethod: 'p2p' }));
+              if (onOpenP2PSync) {
+                setTimeout(() => onOpenP2PSync(), 100);
+              }
+            }}
+          >
+            <input 
+              type="radio" 
+              name="sync" 
+              className="hidden" 
+              checked={localSettings.syncMethod === 'p2p'} 
+              readOnly
+            />
+            <Wifi size={20} className={localSettings.syncMethod === 'p2p' ? 'text-green-500' : 'text-gray-400'} />
+            <div>
+              <div className="font-medium">P2P Sync</div>
+              <div className="text-xs text-gray-500">Wireless vault transfer between devices.</div>
+            </div>
+          </label>
+
+          <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-not-allowed transition opacity-60 ${localSettings.syncMethod === 'nostr' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}>
             <input 
               type="radio" 
               name="sync" 
               className="hidden" 
               checked={localSettings.syncMethod === 'nostr'} 
-              onChange={() => setLocalSettings(s => ({ ...s, syncMethod: 'nostr' }))} 
+              disabled
             />
-            <Radio size={20} className={localSettings.syncMethod === 'nostr' ? 'text-purple-500' : 'text-gray-400'} />
-            <div>
-              <div className="font-medium">Nostr Sync</div>
+            <Radio size={20} className="text-gray-400" />
+            <div className="flex-1">
+              <div className="font-medium flex items-center gap-2">
+                Nostr Sync
+                <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full font-semibold">Coming Soon</span>
+              </div>
               <div className="text-xs text-gray-500">Decentralized sync via relays.</div>
             </div>
           </label>
 
-          <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${localSettings.syncMethod === 's3' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}>
+          <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-not-allowed transition opacity-60 ${localSettings.syncMethod === 's3' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}>
             <input 
               type="radio" 
               name="sync" 
               className="hidden" 
               checked={localSettings.syncMethod === 's3'} 
-              onChange={() => setLocalSettings(s => ({ ...s, syncMethod: 's3' }))} 
+              disabled
             />
-            <Cloud size={20} className={localSettings.syncMethod === 's3' ? 'text-orange-500' : 'text-gray-400'} />
-            <div>
-              <div className="font-medium">S3 Backup</div>
+            <Cloud size={20} className="text-gray-400" />
+            <div className="flex-1">
+              <div className="font-medium flex items-center gap-2">
+                S3 Backup
+                <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full font-semibold">Coming Soon</span>
+              </div>
               <div className="text-xs text-gray-500">Sync with your own cloud bucket.</div>
             </div>
           </label>

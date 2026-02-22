@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-02-22
+
+### Added
+- P2P Sync option in Settings > Sync Method
+- "Coming Soon" badges for Nostr Sync and S3 Backup options
+
+### Changed
+- Moved P2P Sync from top navbar to Settings > Sync Method
+- Improved Docker workflow to properly tag images with version numbers
+- Docker images now trigger build after auto-release workflow completes
+- Enhanced tagging strategy for both semver tags and package.json versions
+- Nostr Sync and S3 Backup options are now disabled with informative badges
+
+### Removed
+- P2P Sync button from top navigation bar
+
+### Fixed
+- Docker images now correctly tagged with version (e.g., 1.1.10, 1.1.10-nopin)
+- Fixed issue where only `latest` tags were created without version-specific tags
+
 ## [1.1.9] - 2026-02-22
 
 ### Added
@@ -19,10 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated from Tailwind CDN to PostCSS plugin for production builds
 - Updated service worker to cache compiled CSS instead of CDN
 - Improved build performance with proper Tailwind purging
+- Enhanced Docker workflow to create version-specific image tags (e.g., 1.1.9, 1.1.9-nopin)
+- Docker workflow now triggers after auto-release completes
 
 ### Fixed
 - Removed Tailwind CDN warning in production builds
 - Better CSS optimization and smaller bundle size
+- Docker images now properly tagged with version numbers from package.json
 
 ## [1.1.8] - 2026-02-22
 
@@ -171,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Data stored in browser localStorage
 - Secrets never leave device unless explicitly synced
 
-[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.9...HEAD
+[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.10...HEAD
+[1.1.10]: https://github.com/donnimsipa/otphaven/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/donnimsipa/otphaven/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/donnimsipa/otphaven/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/donnimsipa/otphaven/compare/v1.1.6...v1.1.7
