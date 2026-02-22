@@ -1,10 +1,21 @@
-const CACHE_NAME = 'otphaven-v1';
+const CACHE_NAME = 'otphaven-v1.1.8';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+  // Core dependencies from esm.sh
+  'https://esm.sh/react@^19.2.4',
+  'https://esm.sh/react-dom@^19.2.4',
+  'https://esm.sh/lucide-react@^0.564.0',
+  'https://esm.sh/framer-motion@^12.34.0',
+  'https://esm.sh/html5-qrcode@^2.3.8',
+  'https://esm.sh/otpauth@^9.5.0',
+  'https://esm.sh/crypto-js@^4.2.0',
+  'https://esm.sh/peerjs@1.5.4?bundle-deps',
+  'https://esm.sh/qrcode@^1.5.4',
+  'https://esm.sh/jszip@^3.10.1'
 ];
 
 self.addEventListener('install', (event) => {
@@ -14,25 +25,57 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Cache-first strategy for CDN modules (esm.sh) and local assets
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+
+  // Cache-first strategy for all resources
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
+      
       return fetch(event.request).then((response) => {
-        // Cache successful responses from esm.sh
-        if (!response || response.status !== 200 || response.type !== 'basic' && !event.request.url.includes('esm.sh')) {
+        // Only cache successful responses
+        if (!response || response.status !== 200) {
           return response;
         }
 
-        // Clone response to cache it
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        // Cache responses from esm.sh, CDNs, and local assets
+        const shouldCache = 
+          event.request.url.includes('esm.sh') ||
+          event.request.url.includes('cdn.tailwindcss.com') ||
+          event.request.url.includes('fonts.googleapis.com') ||
+          event.request.url.includes('fonts.gstatic.com') ||
+          event.request.url.startsWith(self.location.origin);
+
+        if (shouldCache) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        
         return response;
+      }).catch(() => {
+        // Return offline fallback if available
+        return caches.match('./index.html');
       });
+    })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  // Clean up old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
     })
   );
 });

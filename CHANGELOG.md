@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.8] - 2026-02-22
+
+### Changed
+- Improved offline PWA capability with comprehensive service worker caching
+- Updated service worker to cache all esm.sh dependencies (React, libraries)
+- Enhanced fetch handler to cache CDN resources (Tailwind, Google Fonts)
+- Replaced external CDN icons with embedded SVG data URIs in manifest
+- Added cache cleanup on service worker activation
+- Added offline fallback for better resilience
+
+### Fixed
+- PWA now fully functional offline after initial online visit
+- Service worker cache version updated to match app version (1.1.8)
+- Manifest icons no longer require network requests
+
 ## [1.1.7] - 2026-02-17
 
 ### Added
@@ -139,7 +154,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Data stored in browser localStorage
 - Secrets never leave device unless explicitly synced
 
-[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.7...HEAD
+[unreleased]: https://github.com/donnimsipa/otphaven/compare/v1.1.8...HEAD
+[1.1.8]: https://github.com/donnimsipa/otphaven/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/donnimsipa/otphaven/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/donnimsipa/otphaven/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/donnimsipa/otphaven/compare/v1.1.4...v1.1.5
