@@ -6,9 +6,10 @@ otphaven is a standalone, mobile-first web application designed for securely sto
 
 - **Local-first Security:** Data is encrypted using AES-256 (PBKDF2) with your master PIN.
 - **Offline Generation:** TOTP codes are generated purely on the client side.
-- **P2P Sync:** Sync your vault across devices wirelessly using PeerJS (WebRTC).
+- **Continuous Real-Time P2P Sync:** Sync your vault across devices wirelessly using PeerJS (WebRTC). The connection stays alive in the background — changes on one device appear on the other instantly, even while navigating away from the sync screen.
+- **Automatic Reconnection:** If a connection drops, the client peer automatically reconnects using exponential backoff without requiring a new pairing code.
 - **QR Scanning:** Easily add accounts by scanning QR codes with your camera.
-- **Batch QR Import:** Import multiple QR code images at once for quick setup.
+- **Batch QR Import:** Import multiple QR code images at once — imported accounts are automatically synced to connected peers.
 - **Responsive Design:** Optimized for mobile but fully functional on desktop.
 - **Privacy Oriented:** No backend required for core functionality.
 
@@ -109,6 +110,38 @@ If you want to deploy to a manual Nginx server:
 2.  **Copy the `dist/` folder** to your server.
 3.  **Configure Nginx** to serve the `index.html` for all routes (see `nginx.conf` in this repo for a reference).
 
+## 🔄 P2P Sync
+
+otphaven supports continuous real-time synchronization between two devices using WebRTC (PeerJS). No server or account is required.
+
+### How It Works
+
+1. Open **Settings → Sync Method → P2P Sync** on both devices.
+2. On the first device (Host), tap **Generate Room Code**.
+3. On the second device (Client), enter the 4-digit code and tap connect.
+4. Both devices perform an **automatic initial full-vault merge**.
+5. From that point on, all changes (add, edit, delete accounts, import, settings) are transmitted as **incremental delta updates** in real time — even when the P2P screen is not visible.
+
+### Sync Behaviour
+
+| Event | Sync Method |
+|---|---|
+| Initial connection | Full vault exchange (both directions) |
+| Add / Edit / Delete account | Incremental delta update |
+| Batch QR import | Per-account delta update |
+| Restore from backup | Full vault push |
+| Settings change | Full vault push |
+
+### Connection Lifecycle
+
+- The P2P connection **stays alive in the background** while you use the app normally.
+- If the connection drops, the **client automatically reconnects** using exponential backoff (3 s → 6 s → 12 s … up to 30 s, max 5 attempts).
+- The host remains in listening mode and accepts the reconnecting client without requiring a new code.
+- The connection is destroyed only when the vault is locked, the user logs out, or the browser tab is closed.
+
+### Conflict Resolution
+
+Conflicts are resolved using **last-write-wins** based on the `updatedAt` timestamp stored on each account. If a remote change is older than the local copy, the local version is pushed back to the sender to reconcile state. The same change ID is never processed twice, preventing infinite sync loops.
 
 ## 🛡️ Security Disclaimer
 

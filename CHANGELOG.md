@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-07-28
+
+### Added
+- Continuous real-time P2P synchronization — connection now persists in the background across all app screens
+- Automatic initial vault synchronization on connection open (both peers exchange full vault without requiring a manual button press)
+- Incremental delta synchronization for account create, update, and delete operations after initial sync
+- ACK-based reliable message delivery — unacknowledged delta updates are retried up to 3 times with a 5-second timeout
+- Offline update queuing — changes made while disconnected are automatically flushed to the peer on reconnect
+- Exponential backoff automatic reconnection for client peers (3 s → 6 s → 12 s … capped at 30 s, max 5 attempts) without requiring a new pairing code
+- Conflict resolution push-back — if a peer holds a newer version of an account than the incoming delta, it pushes the newer local copy back to the sender
+- Infinite sync loop prevention via change ID deduplication (`peerId + timestamp + sequence`) — the same change is never applied or retransmitted more than once
+- Batch QR import synchronization — each imported account is dispatched as an individual delta update to connected peers
+- Settings synchronization — settings changes are pushed to the connected peer as a full vault update
+- Vault restore synchronization — importing a backup pushes the full restored vault to connected peers
+- `updatedAt` field on `TOTPAccount` used for last-write-wins conflict resolution
+
+### Changed
+- `P2PSync` component refactored into a pure presentational component; all service ownership and state moved to `App.tsx`
+- `P2PService` is now instantiated once per vault session and destroyed only on vault lock, logout, or browser close
+- `handleP2PMerge` now also merges `AppSettings` from the remote vault during initial synchronization
+- Reconnection logic corrected: clients reconnect to the stored remote peer ID, not their own local peer ID; hosts remain in listener mode on disconnect
+- `P2PMessage` protocol extended: `DELTA_UPDATE` with empty delta array acts as a sync probe; receiving peer responds with full vault
+
+### Fixed
+- Fixed reconnection bug where the client would attempt to connect to itself instead of the host
+- Fixed infinite sync loop caused by `handleDeltaMerge` re-broadcasting incoming changes under new change IDs
+- Fixed `pendingDeltas` queue never being drained after reconnection
+
 ## [1.1.10] - 2026-02-22
 
 ### Added

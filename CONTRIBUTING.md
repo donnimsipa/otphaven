@@ -69,6 +69,19 @@ Feature requests are welcome! Please:
 - **Services:** Place business logic in `services/`
 - **Types:** Define interfaces in `types.ts`
 
+### P2P Sync Architecture
+
+The P2P synchronization system follows a strict ownership model:
+
+- **`P2PService` (`services/p2pService.ts`)** — stateless WebRTC wrapper. Handles connection lifecycle, ACK delivery, retries, and reconnection. Must not hold any React state.
+- **`App.tsx`** — sole owner of the `P2PService` instance. Instantiates on vault unlock, destroys on vault lock/logout/unload. All P2P state (status, logs, room code) lives here.
+- **`P2PSync.tsx` (`components/P2PSync.tsx`)** — pure presentational component. Receives all state and handlers via props. Has **no** `useEffect` cleanup that destroys the connection.
+
+**Key invariants to preserve:**
+- Never call `p2pService.destroy()` from `P2PSync`'s unmount.
+- Incoming delta updates must **not** be re-broadcast; only explicit local changes (`handleSaveAccount`, `deleteAccount`, `handleBatchImageImport`, etc.) should call `sendAccountChange`.
+- The empty-delta `DELTA_UPDATE` message is the sync probe. Do not repurpose or filter it.
+
 ### Commit Messages
 
 Follow conventional commits format:
@@ -96,9 +109,22 @@ Before submitting:
 1. Test on multiple browsers (Chrome, Firefox, Safari)
 2. Test on mobile devices (iOS and Android)
 3. Test offline functionality
-4. Test P2P sync between devices
-5. Test import/export features
-6. Verify encryption/decryption works correctly
+4. Test import/export features
+5. Verify encryption/decryption works correctly
+
+### P2P Sync Testing Checklist
+
+When modifying anything related to `p2pService.ts`, `App.tsx` P2P state, or `P2PSync.tsx`:
+
+- [ ] Pair two browser tabs (or devices) and verify the initial vault merge happens automatically
+- [ ] Add an account on one peer while the P2P screen is **not** visible; verify it appears on the other peer
+- [ ] Edit and delete accounts; verify changes sync bidirectionally
+- [ ] Batch-import QR images; verify each account appears on the peer
+- [ ] Change a setting; verify the setting syncs to the peer
+- [ ] Close the connection on one side; verify the client reconnects automatically without a new code
+- [ ] Navigate away from the P2P screen mid-session; verify the connection **does not** drop
+- [ ] Lock the vault; verify the P2P connection is destroyed and state is cleared
+- [ ] Add accounts on both peers simultaneously while offline, then reconnect; verify both sides converge correctly without duplicates or loops
 
 ## 📝 Changelog Updates
 

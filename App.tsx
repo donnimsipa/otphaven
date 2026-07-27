@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Search, Settings as SettingsIcon, ShieldCheck, Lock, LogOut, ArrowLeft, Info, Layers, HelpCircle, X, BookOpen, Key, Clock, Save, Wifi, AlertCircle, Database, Trash2, Grid, List, Edit2 } from 'lucide-react';
-import { TOTPAccount, AppSettings, VaultState, DecryptedVault } from './types';
+import { TOTPAccount, AppSettings, VaultState, DecryptedVault, SyncChange, AccountOperation } from './types';
 import { saveVault, loadVault, vaultExists, clearVault, getStorageUsage } from './services/cryptoService';
 import { parseMigrationUrl } from './services/totpService';
 import TOTPCard from './components/TOTPCard';
 import Scanner from './components/Scanner';
 import Settings from './components/Settings';
 import P2PSync from './components/P2PSync';
+import { P2PService, ConnectionStatus } from './services/p2pService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { version } from './package.json';
 
@@ -51,6 +52,142 @@ const App: React.FC = () => {
     const [search, setSearch] = useState('');
     const [storageStats, setStorageStats] = useState(getStorageUsage());
 
+    // P2P Service and connection states
+    const [p2pMode, setP2pMode] = useState<'host' | 'join'>('host');
+    const [p2pStatus, setP2pStatus] = useState<ConnectionStatus>('disconnected');
+    const [p2pStatusMsg, setP2pStatusMsg] = useState('');
+    const [p2pRoomCode, setP2pRoomCode] = useState('');
+    const [p2pInputCode, setP2pInputCode] = useState('');
+    const [p2pLogs, setP2pLogs] = useState<string[]>([]);
+    const [p2pLastSyncTime, setP2pLastSyncTime] = useState<Date | null>(null);
+    const [p2pPendingDeltas, setP2pPendingDeltas] = useState<number>(0);
+
+    const p2pServiceRef = useRef<P2PService | null>(null);
+
+    const onStatusChangeRef = useRef<(status: ConnectionStatus, msg?: string) => void>(() => {});
+    const onDeltaReceiveRef = useRef<(delta: SyncChange[]) => void>(() => {});
+    const onVaultReceiveRef = useRef<(data: DecryptedVault) => void>(() => {});
+    const onInitialSyncRequestRef = useRef<() => void>(() => {});
+
+    // Helper to add log
+    const addP2PLog = useCallback((msg: string) => {
+        setP2pLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
+
+    // Update refs on every render
+    onStatusChangeRef.current = (newStatus, msg) => {
+        setP2pStatus(newStatus);
+        if (msg) setP2pStatusMsg(msg);
+        addP2PLog(`Status: ${newStatus} ${msg || ''}`);
+        
+        if (newStatus === 'connected' || newStatus === 'syncing') {
+            setP2pLastSyncTime(new Date());
+        }
+        
+        if (newStatus === 'syncing') {
+            setP2pPendingDeltas(prev => prev + 1);
+        }
+    };
+
+    onDeltaReceiveRef.current = (deltas) => {
+        addP2PLog(`Received ${deltas.length} delta update(s)`);
+        setP2pPendingDeltas(prev => Math.max(0, prev - deltas.length));
+        handleDeltaMerge(deltas);
+    };
+
+    onVaultReceiveRef.current = (data) => {
+        addP2PLog("Received Vault Data. Merging...");
+        handleP2PMerge(data);
+        addP2PLog("Merge Complete.");
+    };
+
+    onInitialSyncRequestRef.current = () => {
+        if (p2pServiceRef.current && vaultState.data) {
+            p2pServiceRef.current.sendVault(vaultState.data);
+            addP2PLog("Sent local vault data for initial sync request.");
+        }
+    };
+
+    // P2P Handlers
+    const handleCreateRoom = async () => {
+        if (!p2pServiceRef.current) return;
+        try {
+            setP2pLogs([]);
+            const code = await p2pServiceRef.current.initHost();
+            setP2pRoomCode(code);
+            addP2PLog(`Room Created: ${code}`);
+        } catch (e) {
+            addP2PLog("Failed to create room.");
+        }
+    };
+
+    const handleJoinRoom = (code: string) => {
+        if (!p2pServiceRef.current || code.length !== 4) return;
+        setP2pLogs([]);
+        p2pServiceRef.current.join(code);
+    };
+
+    const handleSend = () => {
+        if (!p2pServiceRef.current || !vaultState.data) return;
+        p2pServiceRef.current.sendVault(vaultState.data);
+        addP2PLog("Sent local vault data.");
+    };
+
+    const handleDisconnect = () => {
+        if (p2pServiceRef.current) {
+            p2pServiceRef.current.destroy();
+            // Re-instantiate the service so it's ready for a new connection
+            p2pServiceRef.current = new P2PService(
+                (status, msg) => onStatusChangeRef.current(status, msg),
+                (delta) => onDeltaReceiveRef.current(delta),
+                (data) => onVaultReceiveRef.current(data),
+                () => onInitialSyncRequestRef.current()
+            );
+        }
+        setP2pStatus('disconnected');
+        setP2pStatusMsg('');
+        setP2pRoomCode('');
+        setP2pInputCode('');
+        setP2pPendingDeltas(0);
+    };
+
+    // Instantiate and cleanup service based on lock state
+    useEffect(() => {
+        if (vaultState.isLocked) {
+            if (p2pServiceRef.current) {
+                p2pServiceRef.current.destroy();
+                p2pServiceRef.current = null;
+            }
+            setP2pStatus('disconnected');
+            setP2pStatusMsg('');
+            setP2pRoomCode('');
+            setP2pInputCode('');
+            setP2pLogs([]);
+            setP2pLastSyncTime(null);
+            setP2pPendingDeltas(0);
+        } else {
+            if (!p2pServiceRef.current) {
+                p2pServiceRef.current = new P2PService(
+                    (status, msg) => onStatusChangeRef.current(status, msg),
+                    (delta) => onDeltaReceiveRef.current(delta),
+                    (data) => onVaultReceiveRef.current(data),
+                    () => onInitialSyncRequestRef.current()
+                );
+            }
+        }
+    }, [vaultState.isLocked]);
+
+    // Handle window unload to destroy connection
+    useEffect(() => {
+        const handleUnload = () => {
+            if (p2pServiceRef.current) {
+                p2pServiceRef.current.destroy();
+            }
+        };
+        window.addEventListener('beforeunload', handleUnload);
+        return () => window.removeEventListener('beforeunload', handleUnload);
+    }, []);
+
     // Idle Timer State
     const lastActivityRef = useRef<number>(Date.now());
 
@@ -69,6 +206,8 @@ const App: React.FC = () => {
 
     const [errorMsg, setErrorMsg] = useState('');
     const [showHelp, setShowHelp] = useState(false);
+
+
 
     // Initialization
     useEffect(() => {
@@ -235,6 +374,7 @@ const App: React.FC = () => {
 
         let newAccounts = [...vaultState.data.accounts];
         const existingIndex = newAccounts.findIndex(a => a.id === account.id);
+        const isUpdate = existingIndex >= 0;
 
         if (existingIndex >= 0) {
             // Update existing
@@ -247,6 +387,12 @@ const App: React.FC = () => {
         handleUpdateVault({ ...vaultState.data, accounts: newAccounts });
         setView('home');
         resetForm();
+
+        // Send delta update for continuous sync if P2P is connected
+        if (p2pServiceRef.current) {
+            const operation: AccountOperation = isUpdate ? 'update' : 'create';
+            p2pServiceRef.current.sendAccountChange(operation, account);
+        }
     };
 
     const resetForm = () => {
@@ -255,8 +401,15 @@ const App: React.FC = () => {
 
     const deleteAccount = (id: string) => {
         if (!vaultState.data) return;
+        
+        const accountToDelete = vaultState.data.accounts.find(a => a.id === id);
         const newAccounts = vaultState.data.accounts.filter(a => a.id !== id);
         handleUpdateVault({ ...vaultState.data, accounts: newAccounts });
+
+        // Send delta update for continuous sync if P2P is connected
+        if (p2pServiceRef.current && accountToDelete) {
+            p2pServiceRef.current.sendAccountChange('delete', accountToDelete);
+        }
     };
 
     const initiateEdit = (account: TOTPAccount) => {
@@ -316,6 +469,13 @@ const App: React.FC = () => {
         if (newAccounts.length > 0) {
             const updatedAccounts = [...vaultState.data.accounts, ...newAccounts];
             handleUpdateVault({ ...vaultState.data, accounts: updatedAccounts });
+
+            // Sync new accounts to peer
+            if (p2pServiceRef.current) {
+                newAccounts.forEach(account => {
+                    p2pServiceRef.current.sendAccountChange('create', account);
+                });
+            }
         }
 
         alert(`Batch Import Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}`);
@@ -324,9 +484,113 @@ const App: React.FC = () => {
 
     const handleImport = (importedVault: DecryptedVault) => {
         handleUpdateVault(importedVault);
+        if (p2pServiceRef.current) {
+            p2pServiceRef.current.sendVault(importedVault);
+        }
     };
 
-    // Sync Logic with Conflict Summary
+    // Delta merge with conflict resolution
+    // Uses last-write-wins with peer ID as tiebreaker
+    const handleDeltaMerge = (deltas: SyncChange[]) => {
+        if (!vaultState.data) return;
+
+        const localMap = new Map<string, TOTPAccount>(vaultState.data.accounts.map(a => [a.id, a]));
+        let added = 0;
+        let updated = 0;
+        let deleted = 0;
+        let skipped = 0;
+        const pushBacks: { operation: AccountOperation; account: TOTPAccount }[] = [];
+
+        deltas.forEach(delta => {
+            const localAcc = localMap.get(delta.accountId);
+            
+            switch (delta.operation) {
+                case 'create':
+                    if (!localAcc) {
+                        // New account from remote
+                        if (delta.data) {
+                            localMap.set(delta.accountId, delta.data);
+                            added++;
+                        }
+                    } else {
+                        // Account exists locally, check timestamp
+                        const localTime = localAcc.updatedAt || 0;
+                        const remoteTime = delta.data?.updatedAt || 0;
+                        if (remoteTime > localTime) {
+                            localMap.set(delta.accountId, delta.data || localAcc);
+                            updated++;
+                        } else if (localTime > remoteTime) {
+                            pushBacks.push({ operation: 'update', account: localAcc });
+                        } else {
+                            skipped++;
+                        }
+                    }
+                    break;
+
+                case 'update':
+                    if (localAcc) {
+                        // Account exists locally, check timestamp
+                        const localTime = localAcc.updatedAt || 0;
+                        const remoteTime = delta.data?.updatedAt || 0;
+                        if (remoteTime > localTime) {
+                            localMap.set(delta.accountId, delta.data || localAcc);
+                            updated++;
+                        } else if (localTime > remoteTime) {
+                            pushBacks.push({ operation: 'update', account: localAcc });
+                        } else {
+                            skipped++;
+                        }
+                    } else {
+                        // Account doesn't exist locally, create it
+                        if (delta.data) {
+                            localMap.set(delta.accountId, delta.data);
+                            added++;
+                        }
+                    }
+                    break;
+
+                case 'delete':
+                    if (localAcc) {
+                        // Account exists locally, check timestamp
+                        const localTime = localAcc.updatedAt || 0;
+                        const remoteTime = delta.data?.updatedAt || 0;
+                        if (remoteTime > localTime) {
+                            localMap.delete(delta.accountId);
+                            deleted++;
+                        } else if (localTime > remoteTime) {
+                            pushBacks.push({ operation: 'update', account: localAcc });
+                        } else {
+                            skipped++;
+                        }
+                    } else {
+                        // Account doesn't exist locally
+                        skipped++;
+                    }
+                    break;
+            }
+        });
+
+        if (added > 0 || updated > 0 || deleted > 0) {
+            const mergedAccounts = Array.from(localMap.values());
+            handleUpdateVault({ ...vaultState.data, accounts: mergedAccounts });
+        }
+
+        // Push back newer local updates to remote to resolve conflicts
+        if (p2pServiceRef.current && pushBacks.length > 0) {
+            pushBacks.forEach(pb => {
+                p2pServiceRef.current.sendAccountChange(pb.operation, pb.account);
+            });
+        }
+
+        // Only show summary if there were actual changes
+        if (added > 0 || updated > 0 || deleted > 0) {
+            setTimeout(() => {
+                alert(`Sync Summary:\n- Added: ${added}\n- Updated: ${updated}\n- Deleted: ${deleted}\n- Skipped (Older): ${skipped}`);
+            }, 100);
+        }
+    };
+
+    // Legacy full vault merge for initial sync
     const handleP2PMerge = (remoteVault: DecryptedVault) => {
         if (!vaultState.data) return;
 
@@ -354,12 +618,25 @@ const App: React.FC = () => {
             }
         });
 
-        if (added > 0 || updated > 0) {
-            const mergedAccounts = Array.from(localMap.values());
-            handleUpdateVault({ ...vaultState.data, accounts: mergedAccounts });
+        // Merge settings: if remote settings differ from local, adopt remote settings
+        let settingsChanged = false;
+        const mergedSettings = { ...vaultState.data.settings };
+        if (JSON.stringify(remoteVault.settings) !== JSON.stringify(vaultState.data.settings)) {
+            Object.assign(mergedSettings, remoteVault.settings);
+            settingsChanged = true;
         }
 
-        alert(`Sync Summary:\n- Added: ${added}\n- Updated: ${updated}\n- Skipped (Older): ${skipped}`);
+        if (added > 0 || updated > 0 || settingsChanged) {
+            const mergedAccounts = Array.from(localMap.values());
+            handleUpdateVault({ ...vaultState.data, accounts: mergedAccounts, settings: mergedSettings });
+        }
+
+        // Only show summary if there were actual changes
+        setTimeout(() => {
+            if (added > 0 || updated > 0 || settingsChanged) {
+                alert(`Sync Summary:\n- Added: ${added}\n- Updated: ${updated}\n- Settings Updated: ${settingsChanged ? 'Yes' : 'No'}\n- Skipped (Older): ${skipped}`);
+            }
+        }, 100);
     };
 
     const handleLogout = () => {
@@ -600,8 +877,20 @@ const App: React.FC = () => {
                             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center p-4">
                                 <div className="w-full max-w-2xl h-full">
                                     <P2PSync
-                                        currentVault={vaultState.data}
-                                        onMerge={handleP2PMerge}
+                                        p2pMode={p2pMode}
+                                        setP2pMode={setP2pMode}
+                                        p2pStatus={p2pStatus}
+                                        p2pStatusMsg={p2pStatusMsg}
+                                        p2pRoomCode={p2pRoomCode}
+                                        p2pInputCode={p2pInputCode}
+                                        setP2pInputCode={setP2pInputCode}
+                                        p2pLogs={p2pLogs}
+                                        p2pLastSyncTime={p2pLastSyncTime}
+                                        p2pPendingDeltas={p2pPendingDeltas}
+                                        handleCreateRoom={handleCreateRoom}
+                                        handleJoinRoom={handleJoinRoom}
+                                        handleSend={handleSend}
+                                        handleDisconnect={handleDisconnect}
                                         onBack={() => setView('home')}
                                     />
                                 </div>
@@ -616,7 +905,11 @@ const App: React.FC = () => {
                                     vault={vaultState.data}
                                     onSave={(s) => {
                                         if (vaultState.data) {
-                                            handleUpdateVault({ ...vaultState.data, settings: s });
+                                            const updatedVault = { ...vaultState.data, settings: s };
+                                            handleUpdateVault(updatedVault);
+                                            if (p2pServiceRef.current) {
+                                                p2pServiceRef.current.sendVault(updatedVault);
+                                            }
                                             setView('home');
                                         }
                                     }}

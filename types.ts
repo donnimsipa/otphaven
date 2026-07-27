@@ -12,6 +12,22 @@ export interface TOTPAccount {
   updatedAt?: number;
 }
 
+// Change tracking for continuous sync
+export type AccountOperation = 'create' | 'update' | 'delete';
+
+export interface ChangeID {
+  peerId: string;
+  timestamp: number;
+  sequence: number;
+}
+
+export interface SyncChange {
+  changeId: ChangeID;
+  operation: AccountOperation;
+  accountId: string;
+  data?: TOTPAccount; // Present for 'create' and 'update' operations
+}
+
 export type ThemeOption = 'system' | 'light' | 'dark';
 
 export interface AppSettings {
